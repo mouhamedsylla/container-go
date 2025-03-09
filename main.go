@@ -21,6 +21,8 @@ func main() {
 	switch command {
 		case "run":
 			run(anotherArgs)
+		case "child":
+			child(anotherArgs)
 		default:
 			println("Unknown command: ", command)
 	}
@@ -28,14 +30,28 @@ func main() {
 
 
 func run(args []string) {	
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.Command("/proc/self/exe", append([]string{"child"}, args...)...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
+
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWUTS,
 	}
 
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println("Error: ", err)
+	}
+}
+
+func child(args []string) {	
+	syscall.Sethostname([]byte("container"))
+
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
 
 	err := cmd.Run()
 	if err != nil {

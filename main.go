@@ -30,13 +30,15 @@ func main() {
 
 
 func run(args []string) {	
+	fmt.Printf("Running %v as %d\n", args, os.Getpid())
+
 	cmd := exec.Command("/proc/self/exe", append([]string{"child"}, args...)...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWUTS,
+		Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID,
 	}
 
 	err := cmd.Run()
@@ -45,8 +47,13 @@ func run(args []string) {
 	}
 }
 
-func child(args []string) {	
+func child(args []string) {
+	fmt.Printf("Running %v as %d\n", args, os.Getpid())
+	
 	syscall.Sethostname([]byte("container"))
+	syscall.Chroot("/home/ahmed/ubuntu-light")
+	syscall.Chdir("/")
+	syscall.Mount("proc", "proc", "proc", 0, "")
 
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout = os.Stdout
@@ -57,4 +64,6 @@ func child(args []string) {
 	if err != nil {
 		fmt.Println("Error: ", err)
 	}
+
+	syscall.Unmount("/proc", 0)
 }
